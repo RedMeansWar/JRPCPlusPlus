@@ -1,0 +1,5 @@
+enum TrayState
+{
+	Open,
+	Close
+};
