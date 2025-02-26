@@ -1,5 +1,8 @@
-enum TrayState
+namespace JRPC_Client
 {
-	Open,
-	Close
-};
+	enum TrayState
+	{
+		Open,
+		Close
+	};
+}

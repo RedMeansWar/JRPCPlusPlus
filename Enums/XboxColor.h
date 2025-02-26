@@ -1,7 +1,10 @@
-enum XboxColor
+namespace JRPC_Client
 {
-    Black,
-    Blue,
-    BlueGray,
-    White
-};
+    enum XboxColor
+    {
+        Black,
+        Blue,
+        BlueGray,
+        White
+    };
+}

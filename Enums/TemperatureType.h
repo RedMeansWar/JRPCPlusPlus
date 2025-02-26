@@ -1,7 +1,10 @@
-enum TemperatureType
+namespace JRPC_Client
 {
-	CPU,
-	GPU,
-	EDRAM,
-	MotherBoard
-};
+	enum TemperatureType
+	{
+		CPU,
+		GPU,
+		EDRAM,
+		MotherBoard
+	};
+}

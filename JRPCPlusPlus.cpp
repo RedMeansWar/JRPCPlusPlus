@@ -2,6 +2,9 @@
 
 #pragma comment(lib, "comsuppw.lib")
 
+#define XAM L"xam.xex"
+#define KERNEL L"xboxkrnl.exe"
+
 namespace JRPC_Client
 {
 	#pragma region Connections
@@ -156,46 +159,291 @@ namespace JRPC_Client
 	#pragma endregion
 
 	#pragma region Console Information
+	std::wstring JRPC::GetCPUKey(IXboxConsole* Console)
+	{
+		std::wstring command = L"consolefeatures ver=2 type=10 params=\"A\\0\\A\\0\\\"";
+		std::wstring text = SendCommand(Console, command);
 
+		size_t spacePos = text.find(L" ");
+		if (spacePos != std::wstring::npos)
+		{
+			return text.substr(spacePos + 1);
+		}
+
+		return L"";
+	}
+
+	std::wstring JRPC::GetConsoleType(IXboxConsole* Console)
+	{
+		std::wstring command = L"consolefeatures ver=2 type=17 params=\"A\\0\\A\\0\\\"";
+		std::wstring text = SendCommand(Console, command);
+
+		size_t spacePos = text.find(L" ");
+		if (spacePos != std::wstring::npos)
+		{
+			return text.substr(spacePos + 1);
+		}
+
+		return L"";
+	}
+	
+	std::wstring JRPC::GetName(IXboxConsole* Console)
+	{
+		std::wstring consoleName = L"";
+		BSTR xboxName = nullptr;
+
+		if (!IsConnected())
+		{
+			return L"";
+		}
+
+		try { consoleName = Console->get_Name(&xboxName); }
+		catch (...) { }
+	}
+
+	std::wstring JRPC::GetKeneralVersion(IXboxConsole* Console)
+	{
+		std::wstring command = L"consolefeatures ver=2 type=13 params=\"A\\0\\A\\0\\\"";
+		std::wstring text = SendCommand(Console, command);
+
+		size_t spacePos = text.find(L" ");
+		if (spacePos != std::wstring::npos)
+		{
+			return text.substr(spacePos + 1);
+		}
+
+		return L"";
+	}
 	#pragma endregion
 
 
 	#pragma region Console Features
+	void JRPC::FreezeConsole(IXboxConsole* Console, bool Freeze)
+	{
+		if (Freeze)
+		{
+			SendCommand(Console, L"stop");
+		}
 
+		SendCommand(Console, L"go");
+	}
+
+	void JRPC::ShutDownConsole(IXboxConsole* Console)
+	{
+		try
+		{
+			std::wstring command = L"consolefeatures ver=2 type=11 params=\"A\\0\\A\\0\\\"";
+			SendCommand(Console, command);
+		}
+		catch (...)
+		{
+			throw new std::exception("Failed to shutdown console.");
+		}
+	}
+
+	void JRPC::RebootConsole(IXboxConsole* Console, RebootFlag Flag)
+	{
+		BSTR consoleName = nullptr;
+
+		try
+		{
+			Console->Reboot(consoleName, NULL, NULL, (int)Flag);
+		}
+		catch (...)
+		{
+			throw new std::exception("Failed to reboot console.");
+		}
+	}
+
+	void JRPC::Reboot(IXboxConsole* Console, RebootFlag Flag)
+	{
+		RebootConsole(Console, Flag);
+	}
+
+	bool JRPC::SetFanSpeed(IXboxConsole* Console, int Fan, int Speed)
+	{
+		UINT32 address = ResolveFunction(Console, KERNEL, 41);
+		std::vector<UINT8> numArray(16, 0);
+		std::vector<UINT8> numArray1(16, 16);
+
+		switch (Fan)
+		{
+			case 1: numArray[0] = 148; break;
+			case 2: numArray[0] = 137; break;
+			default: return false;
+		}
+
+		if (Speed > 100)
+		{
+			Speed = 100;
+		}
+
+		if (Speed < 0)
+		{
+			Speed = 55;
+		}
+
+		numArray[1] = Speed >= 45 ? static_cast<UINT8>(Speed | 128) : static_cast<UINT8>(127);
+		
+
+	}
 	#pragma endregion
 
 
 	#pragma region Memory
-	UINT32 JRPC::ResolveFunction(IXboxConsole& Console, std::wstring& Module, UINT32 Ordinal)
+	UINT32 JRPC::ResolveFunction(IXboxConsole* Console, std::wstring Module, UINT32 Ordinal)
 	{
-		std::wstring command = L"consolefeatures ver=" + JRPCVersion + L" type=9 params=\"A\\0\\A\\2\\" +
-			std::to_wstring(Module.length()) + L"\\" +
-			ToHexWString(Module) + L"\\" +
-			std::to_wstring(Ordinal) + L"\\\"";
+		std::size_t moduleString = Module.length();
+		std::wostringstream oss;
 
-		std::wstring response = SendCommand(&Console, command);
-		std::size_t spacePos = response.find(' ');
+		oss << L"consolefeatures ver=2 type=9 params=\"A\\0\\A\\2\\"
+			<< L"\\" << ToHexWString(Module)
+			<< L"\\" << Ordinal
+			<< L"\\\"";
 
-		if (spacePos != std::wstring::npos)
+		std::wstring text = SendCommand(Console, oss.str());
+
+		size_t spacePos = text.find(L" ");
+		if (spacePos == std::wstring::npos)
 		{
-			std::wstring hexAddress = response.substr(spacePos + 1);
+			return 0;
+		}
 
-			try
+		return std::stoul(text.substr(spacePos + 1), nullptr, 16);
+	}
+
+	std::wstring JRPC::CallArgs(IXboxConsole* Console, bool SystemThread, UINT32 Type, const std::type_info& T, const std::wstring Module, int Ordinal, UINT32 Address, UINT32 ArraySize, const std::vector<std::any>& Arguments)
+	{
+		if (!IsValidReturnType(T))
+		{
+			throw std::invalid_argument("JRPC only supports: bool, byte, short, int, long, ushort, uint, ulong, float, double");
+		}
+
+		UINT32 connectionTimeout = Console->put_ConversationTimeout(4000000U);
+		Console->put_ConnectTimeout(connectionTimeout);
+
+		std::wostringstream command;
+		command << L"consolefeatures ver=2 type=" << Type
+				<< (SystemThread ? L" system" : L"")
+				<< (Module.empty() ? L"" : L" module=\"" + Module + L"\" ord=" + std::to_wstring(Ordinal))
+				<< L" as=" << ArraySize << L" params=\"A\\"
+				<< std::hex << Address << L"\\A\\" << Arguments.size() << L"\\";
+
+		if (Arguments.size() > 37)
+		{
+			throw std::invalid_argument("You can't use more than 37 parameters in a call.");
+		}
+
+		for (const auto arg : Arguments)
+		{
+			bool flag = false;
+			if (arg.type() == typeid(JRPC::Int))
 			{
-				return std::stoul(hexAddress, nullptr, 16);
+				command << "Int\\" << std::any_cast<UINT32>(arg) << "\\";
 			}
-			catch (const std::invalid_argument& ex)
+			else if (arg.type() == typeid(INT) || arg.type() == typeid(BOOLEAN) || arg.type() == typeid(UINT8))
 			{
-				throw std::runtime_error("Failed to parse function address: " + std::string(ex.what()));
+				if (arg.type() == typeid(BOOLEAN))
+				{
+					command << "Int/" << std::any_cast<BOOLEAN>(arg) << "\\";
+				}
+				else
+				{
+					command << "Int\\" << std::any_cast<INT>(arg) << "\\";
+				}
+			}
+			else if (arg.type() == typeid(std::vector<INT>))
+			{
+				const auto& vec = std::any_cast<std::vector<int>>(arg);
+				command << "ByteArray/" << vec.size() * sizeof(int) << "\\";
+
+				for (const auto& elem : vec)
+				{
+					command << std::hex << elem << "\\";
+				}
+			}
+			else if (arg.type() == typeid(std::string))
+			{
+				const auto& str = std::any_cast<std::string>(arg);
+
+			}
+			else if (arg.type() == typeid(std::string))
+			{
+				const auto& str = std::any_cast<std::string>(arg);
+				command << "ByteArray/" << str.size() << "\\" << str.c_str();
+			}
+			else if (arg.type() == typeid(double))
+			{
+				command << "Float\\" << std::any_cast<double>(arg) << "\\";
+			}
+			else if (arg.type() == typeid(float))
+			{
+				command << "Float\\" << std::any_cast<float>(arg) << "\\";
+			}
+			else if (arg.type() == typeid(std::vector<float>))
+			{
+				const auto& vec = std::any_cast<std::vector<float>>(arg);
+				command << "ByteArray/" << vec.size() * sizeof(float) << "\\";
+				for (const auto& elem : vec)
+				{
+					command << std::hex << elem << "\\";
+				}
+			}
+			else if (arg.type()  == typeid(std::vector<UINT8>))
+			{
+				const auto& vec = std::any_cast<std::vector<uint8_t>>(arg);
+				command << "ByteArray/" << vec.size() << "\\";
+				for (const auto& elem : vec)
+				{
+					command << std::hex << static_cast<int>(elem) << "\\";
+				}
+			}
+			else
+			{
+				command << "Uint64\\" << std::any_cast<uint64_t>(arg) << "\\";
 			}
 		}
 
-		throw std::runtime_error("Invalid response format: function address not found.");
+		command << "\"";
+
+		std::wstring text = command.str().c_str();
+		std::wstring text1 = SendCommand(Console, text);
+
+		std::wstring text2 = L"buf_addr=";
+		while (text1.contains(text2))
+		{
+			Sleep(250);
+			std::wstringstream cmd;
+			UINT32 parsedSubstring = ParseHexValue(text1.substr(text1.find(text2) + text2.length()).c_str());
+
+			cmd << L"consolefeatures " << text2 << "0x" << parsedSubstring;
+			text1 = SendCommand(Console, cmd.str());
+		}
+
+		Console->put_ConversationTimeout(2000U);
+		Console->put_ConnectTimeout(5000U);
+
+		switch (Type)
+		{
+			case 1U:
+				UINT32 num = ParseHexValue(text1.substr(text1.find(L" ") + 1).c_str());
+				if (T == typeid(UINT32))
+				{
+					//return num;
+				}
+
+				break;
+		}
+
+	}
+
+	void JRPC::CallVoid(IXboxConsole* Console, UINT32 Address, std::vector<void*>& Arguments)
+	{
+
 	}
 	#pragma endregion
 
 	#pragma region Convert
-
 	std::wstring JRPC::ConvertToHex(UINT32 value)
 	{
 		std::wstringstream ss;
@@ -216,7 +464,6 @@ namespace JRPC_Client
 
 	std::string JRPC::ToHexString(const std::string& String)
 	{
-
 		std::stringstream hexStream;
 		for (size_t i = 00; i < String.length(); ++i)
 		{
@@ -247,14 +494,50 @@ namespace JRPC_Client
 
 		return array;
 	}
-	#pragma endregion
 
-	#pragma region Misc
-	bool JRPC::IsValidReturnValue(const std::type_info& t)
+	INT32 JRPC::UIntToInt(UINT32 Value)
 	{
-		return (t == typeid(bool) || t == typeid(int) || t == typeid(UINT32) || t == typeid(long) ||
-			t == typeid(USHORT) || t == typeid(float) || t == typeid(double) || t == typeid(char));
+		UINT8 byteArray[4];
+		std::memcpy(byteArray, &Value, sizeof(Value));
+
+		INT32 result;
+		std::memcpy(&result, byteArray, sizeof(result));
+
+		return result;
 	}
 	#pragma endregion
 
+	#pragma region Misc
+	bool JRPC::IsValidReturnValue(const std::type_info& T)
+	{
+		return (T == typeid(bool) || T == typeid(int) || T == typeid(UINT32) || T == typeid(long) ||
+			T == typeid(USHORT) || T == typeid(float) || T == typeid(double) || T == typeid(char));
+	}
+
+	bool JRPC::IsValidReturnType(const std::type_info& T)
+	{
+		return ValidReturnTypes.contains(T);
+	}
+
+
+	unsigned int JRPC::ParseHexValue(const std::wstring& input)
+	{
+		std::wstring hexStr = input;
+		if (hexStr.find(L"0x") == 0 || hexStr.find(L"0X") == 0)
+		{
+			hexStr = hexStr.substr(2);
+		}
+
+		unsigned int val;
+
+		std::wstringstream wss;
+		wss << std::hex << hexStr;
+		wss >> val;
+
+		return val;
+	}
+	#pragma endregion
+
+	#pragma region DashLaunch
+	#pragma endregion
 }

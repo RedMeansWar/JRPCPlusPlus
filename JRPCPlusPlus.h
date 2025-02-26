@@ -16,11 +16,14 @@
 #include <typeinfo>
 #include <thread>
 #include <cstdint>
+#include <algorithm>
 #include <comutil.h>
 #include <comdef.h>
 #include <wtypes.h>
+#include <any>
 #include <xbdm.h>
 #include <XDevkit.h>
+#include "XbdmCommands.h"
 #include "Enums/LEDState.h"
 #include "Enums/RebootFlag.h"
 #include "Enums/TemperatureType.h"
@@ -40,6 +43,8 @@ namespace JRPC_Client
 	{
 		public:
 			bool						IsConnected();
+			bool						IsDevKit();
+			bool						InXenia();
 			bool						Connect(IXboxConsole** Console, std::wstring XboxNameOrIp = L"default");
 			void						Connect(IXboxConsole** Console);
 			void						Disconnect(IXboxConsole* Console);
@@ -51,17 +56,21 @@ namespace JRPC_Client
 			std::wstring				GetName(IXboxConsole* Console);
 			std::wstring				GetXUID(IXboxConsole* Console);
 			std::wstring				GetDMVersion(IXboxConsole* Console);
-			DWORD						GetCurrentTitleId(IXboxConsole* Console);
-			DWORD						GetKeneralVersion(IXboxConsole* Console);
-			DWORD						GetTemperature(IXboxConsole* Console, TemperatureType TemperatureType);
-			void						FreezeConsole(IXboxConsole* Console);
+			std::wstring				GetCurrentTitleId(IXboxConsole* Console);
+			std::wstring				XamGetCurrentTitleId(IXboxConsole* Console);
+			std::wstring				GetKeneralVersion(IXboxConsole* Console);
+			std::wstring				GetTemperature(IXboxConsole* Console, TemperatureType TemperatureType);
+			void						FreezeConsole(IXboxConsole* Console, bool Freeze);
 			void						ShutDownConsole(IXboxConsole* Console);
-			void						SetFanSpeed(IXboxConsole* Console);
+			void						RebootConsole(IXboxConsole* Console, RebootFlag Flag);
+			void						Reboot(IXboxConsole* Console, RebootFlag Flag);
+			bool						SetFanSpeed(IXboxConsole* Console, int Fan, int Speed);
 			void						GetUserDefaultProfile(IXboxConsole* Console);
 			void						SetUserDefaultProfile(IXboxConsole* Console, long XUID);
 			void						GetSignInState(IXboxConsole* Console);
 			void						QuickSignIn(IXboxConsole* Console);
 			void						SetConsoleColor(IXboxConsole* Console, XboxColor color);
+			void						Push();
 			void						CallVoid(IXboxConsole* Console, UINT32 Address, std::vector<void*>& Arguments);
 			void						CallVoid(IXboxConsole* Console, std::wstring Module, int Ordinal, std::vector<void*>& Arguments);
 			void						CallVoid(IXboxConsole* Console, ThreadType Type, UINT32 Address, std::vector<void*>& Arguments);
@@ -70,28 +79,32 @@ namespace JRPC_Client
 			std::wstring				CallString(IXboxConsole* Console, std::wstring Module, int Ordinal, std::vector<void*>& Arguments);
 			std::wstring				CallString(IXboxConsole* Console, ThreadType Type, UINT32 Address, std::vector<void*>& Arguments);
 			std::wstring				CallString(IXboxConsole* Console, ThreadType Type, std::wstring Module, int Ordinal, std::vector<void*>& Arguments);
+			UINT32						ResolveFunction(IXboxConsole* Console, std::wstring Module, UINT32 Ordinal);
+			INT32						UIntToInt(UINT Value);;
 			std::wstring				ToHexWString(const std::wstring& WString);
 			std::string					ToHexString(const std::string& String);
-			UINT32						ResolveFunction(IXboxConsole& Console, std::wstring& Module, UINT32 Ordinal);
 			std::vector<unsigned char>	ToByteArray(const std::wstring& WString);
 			std::vector<unsigned char>	ToByteArray(const std::string& String);
 
-		private:
-			DWORD										ConnectionId;
-			DWORD										Void = 0U;
-			DWORD										Int = 1U;
-			DWORD										String = 2U;
-			DWORD										Float = 3U;
-			DWORD										Byte = 4U;
-			DWORD										IntArray = 5U;
-			DWORD										FloatArray = 6U;
-			DWORD										ByteArray = 7U;
-			DWORD										Uint64 = 8U;
-			DWORD										Uint64Array = 9U;
-			DWORD										JRPCVersion = 2U;
 
-			bool										IsValidReturnValue(const std::type_info& t);
-			std::wstring								ConvertToHex(UINT32 value);
+		private:
+			DWORD							ConnectionId;
+			DWORD							Void = 0U;
+			DWORD							Int = 1U;
+			DWORD							String = 2U;
+			DWORD							Float = 3U;
+			DWORD							Byte = 4U;
+			DWORD							IntArray = 5U;
+			DWORD							FloatArray = 6U;
+			DWORD							ByteArray = 7U;
+			DWORD							Uint64 = 8U;
+			DWORD							Uint64Array = 9U;
+
+			bool							IsValidReturnValue(const std::type_info& T);
+			bool							IsValidReturnType(const std::type_info& T);
+			std::wstring					ConvertToHex(UINT32 value);
+			unsigned int					ParseHexValue(const std::wstring& input);
+			std::wstring					CallArgs(IXboxConsole* Console, bool SystemThread, UINT32 Type, const std::type_info& T, const std::wstring Module, int Ordinal, UINT32 Address, UINT32 ArraySize, const std::vector<std::any>& Arguments);
 
 			std::unordered_map<std::type_index, int>	StructPrimitiveSizeMap;
 
@@ -165,7 +178,13 @@ namespace JRPC_Client
 			T* CallArray(IXboxConsole* Console, ThreadType Type, std::wstring Module, int Ordinal, UINT32 ArraySize, const std::vector<void*>& Arguments);
 
 			template <typename T>
-			T CallArgs(IXboxConsole* console, bool SystemThread, UINT32 Type, std::type_info& t, std::string module, int ordinal, UINT32 Address, UINT32 ArraySize, const std::vector<std::string>& Arguments);
+			T CallArgs(IXboxConsole* Console, bool SystemThread, UINT32 Type, std::type_info& t, std::string module, int ordinal, UINT32 Address, UINT32 ArraySize, const std::vector<std::string>& Arguments);
+
+			template <typename T>
+			T Peek(IXboxConsole* Console, UINT64 Address);
+
+			template <typename T>
+			void Poke(IXboxConsole* Console, UINT64 Address, const T& Data);
 	};
 }
 

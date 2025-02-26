@@ -113,8 +113,8 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>F:\Coding\Misc Visual Studio Projects\_C Libraries_\Linux\Dirent;F:\Coding\Misc Visual Studio Projects\_C Libraries_\XBDM\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>Default</LanguageStandard>
-      <LanguageStandard_C>Default</LanguageStandard_C>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -152,6 +152,7 @@
     <ClInclude Include="framework.h" />
     <ClInclude Include="JRPCPlusPlus.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="XbdmCommands.h" />
     <ClInclude Include="XboxShortcuts.h" />
   </ItemGroup>
   <ItemGroup>
