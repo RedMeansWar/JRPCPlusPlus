@@ -1,5 +1,4 @@
 #include "JRPCPlusPlus.h"
-
 #pragma comment(lib, "comsuppw.lib")
 
 #define XAM L"xam.xex"
@@ -8,7 +7,7 @@
 namespace JRPC_Client
 {
 	#pragma region Connections
-	bool JRPC_Client::JRPC::Connect(IXboxConsole** Console, std::wstring XboxNameOrIp = L"default")
+	bool JRPC::Connect(IXboxConsole* Console, std::wstring XboxNameOrIp)
 	{
 		IXboxConsole* _console = nullptr;
 		IXboxManager* _manager = nullptr;
@@ -65,7 +64,7 @@ namespace JRPC_Client
 					{
 						if (retry >= 3)
 						{
-							*Console = _console;
+							Console = _console;
 							return false;
 						}
 
@@ -74,7 +73,7 @@ namespace JRPC_Client
 					}
 					else
 					{
-						*Console = _console;
+						Console = _console;
 						return false;
 					}
 				}
@@ -82,25 +81,45 @@ namespace JRPC_Client
 			catch(...)
 			{
 				std::wcerr << L"Exception occurred while opening connection." << std::endl;
-				*Console = _console;
+				Console = _console;
 				return false;
 			}
 		} 
 
-		*Console = _console;
+		Console = _console;
 		return true;
 	}
 
-	void JRPC_Client::JRPC::Connect(IXboxConsole** Console)
+	void JRPC::Disconnect(IXboxConsole* Console)
 	{
-		Connect(Console, L"default");
+		try
+		{
+			SendCommand(Console, L"bye");
+		}
+		catch (...)
+		{
+			throw std::exception("Failed to connect to console.");
+		}
 	}
 
-	bool JRPC_Client::JRPC::IsConnected()
+	void JRPC::Reconnect(IXboxConsole* Console)
+	{
+		try
+		{
+			Disconnect(Console);
+			Sleep(100);
+			Connect(Console);
+		}
+		catch (...)
+		{
+			throw std::exception("Failed to connect to console");
+		}
+	}
+
+	bool JRPC::IsConnected()
 	{
 		return XBDM_CONNECTED;
 	}
-
 	#pragma endregion
 
 	#pragma region Commands
@@ -109,7 +128,7 @@ namespace JRPC_Client
 		if (ConnectionId == NULL || Console == nullptr)
 		{
 			std::wcerr << L"IXboxConsole argument did not connect using JRPC's connect function." << std::endl;
-			return;
+			return L"";
 		}
 
 		BSTR* response = nullptr;
@@ -214,6 +233,55 @@ namespace JRPC_Client
 
 		return L"";
 	}
+
+	UINT32 JRPC::XamGetCurrentTitleId(IXboxConsole* Console)
+	{
+		std::wstring command = L"consolefeatures ver=2 type=16 params=\"A\\0\\A\\0\\\"";
+		std::wstring text = SendCommand(Console, command);
+
+		UINT32 titleId = ParseHexValue(text);
+		return titleId;
+	}
+
+	UINT32 JRPC::GetCurrentTitleId(IXboxConsole* Console)
+	{
+		XamGetCurrentTitleId(Console);
+	}
+
+	std::wstring JRPC::GetDMVersion(IXboxConsole* Console)
+	{
+		std::wstring debugMonitor = L"";
+		
+		if (!IsConnected())
+		{
+			return L"";
+		}
+
+		try
+		{
+			debugMonitor = SendCommand(Console, L"dmversion");
+			debugMonitor = ReplaceWString(debugMonitor, L"200- ", L"");
+		}
+		catch (...)
+		{
+
+		}
+
+		return debugMonitor;
+	}
+
+	UINT32 JRPC::GetTemperature(IXboxConsole* Console, TemperatureType TemperatureType)
+	{
+		std::wostringstream oss;
+		oss << "consolefeatures ver=2 type=15 params=\"A\\0\\A\\1\\"
+			<< JRPC::Int
+			<< "\\"
+			<< (int)TemperatureType
+			<< "\\\"";
+
+		std::wstring command = SendCommand(Console, oss.str());
+		return ParseHexValue(command);
+	}
 	#pragma endregion
 
 
@@ -241,7 +309,7 @@ namespace JRPC_Client
 		}
 	}
 
-	void JRPC::RebootConsole(IXboxConsole* Console, RebootFlag Flag)
+	void JRPC::RebootConsole(IXboxConsole* Console, XboxRebootFlag Flag)
 	{
 		BSTR consoleName = nullptr;
 
@@ -255,7 +323,7 @@ namespace JRPC_Client
 		}
 	}
 
-	void JRPC::Reboot(IXboxConsole* Console, RebootFlag Flag)
+	void JRPC::Reboot(IXboxConsole* Console, XboxRebootFlag Flag)
 	{
 		RebootConsole(Console, Flag);
 	}
@@ -286,6 +354,23 @@ namespace JRPC_Client
 		numArray[1] = Speed >= 45 ? static_cast<UINT8>(Speed | 128) : static_cast<UINT8>(127);
 		
 
+	}
+
+	void JRPC::XNotify(IXboxConsole* Console, std::wstring Message, int Type)
+	{
+		std::wostringstream oss;
+		oss << L"consolefeatures ver=2 type=12 params=\"A\\0\\A\\2\\"
+			<< JRPC::String << L"/" << Message.length() << L"\\"
+			<< ToHexWString(Message) << "\\"
+			<< JRPC::Int << L"\\"
+			<< Type << L"\\\"";
+
+		SendCommand(Console, oss.str());
+	}
+
+	void JRPC::XNotify(IXboxConsole* Console, std::wstring Message, XNotifyType Type)
+	{
+		XNotify(Console, Message, (int)Type);
 	}
 	#pragma endregion
 
@@ -337,11 +422,13 @@ namespace JRPC_Client
 		for (const auto arg : Arguments)
 		{
 			bool flag = false;
-			if (arg.type() == typeid(JRPC::Int))
+
+			if (arg.type() == typeid(INT))
 			{
 				command << "Int\\" << std::any_cast<UINT32>(arg) << "\\";
 			}
-			else if (arg.type() == typeid(INT) || arg.type() == typeid(BOOLEAN) || arg.type() == typeid(UINT8))
+
+			if (arg.type() == typeid(INT) || arg.type() == typeid(BOOLEAN) || arg.type() == typeid(UINT8))
 			{
 				if (arg.type() == typeid(BOOLEAN))
 				{
@@ -456,7 +543,7 @@ namespace JRPC_Client
 		std::wstringstream hexStream;
 		for (size_t i = 00; i < WString.length(); ++i)
 		{
-			hexStream << std::setw(2) << std::setfill('0') << std::hex << (static_cast<unsigned char>(WString[i]));
+			hexStream << std::setw(2) << std::setfill(L'0') << std::hex << (static_cast<unsigned char>(WString[i]));
 		}
 
 		return hexStream.str();
@@ -535,6 +622,17 @@ namespace JRPC_Client
 		wss >> val;
 
 		return val;
+	}
+
+	std::wstring JRPC::ReplaceWString(std::wstring source, const std::wstring& from, const std::wstring& to)
+	{
+		size_t startPos = source.find(from);
+		if (startPos != std::wstring::npos)
+		{
+			source.replace(startPos, from.length(), to);
+		}
+
+		return source;
 	}
 	#pragma endregion
 

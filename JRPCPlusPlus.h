@@ -15,7 +15,7 @@
 #include <iomanip>
 #include <typeinfo>
 #include <thread>
-#include <cstdint>
+#include <cstdint> 
 #include <algorithm>
 #include <comutil.h>
 #include <comdef.h>
@@ -23,13 +23,13 @@
 #include <any>
 #include <xbdm.h>
 #include <XDevkit.h>
+#include "LEDState.h"
+#include "XboxColor.h"
+#include "XboxRebootFlag.h"
+#include "TemperatureType.h"
+#include "XboxThreadType.h"
 #include "XbdmCommands.h"
-#include "Enums/LEDState.h"
-#include "Enums/RebootFlag.h"
-#include "Enums/TemperatureType.h"
-#include "Enums/TrayState.h"
-#include "Enums/XboxColor.h"
-#include "Enums/XNotifyType.h"
+#include "XNotifyType.h"
 
 #ifdef JRPCPLUSPLUS_EXPORTS
 #define DLL_API __declspec(dllexport)
@@ -45,8 +45,7 @@ namespace JRPC_Client
 			bool						IsConnected();
 			bool						IsDevKit();
 			bool						InXenia();
-			bool						Connect(IXboxConsole** Console, std::wstring XboxNameOrIp = L"default");
-			void						Connect(IXboxConsole** Console);
+			bool						Connect(IXboxConsole* Console, std::wstring XboxNameOrIp = L"default");
 			void						Disconnect(IXboxConsole* Console);
 			void						Reconnect(IXboxConsole* Console);
 			void						SetLEDs(IXboxConsole* Console, LEDState TopLeft, LEDState TopRight, LEDState BottomLeft, LEDState BottomRight);
@@ -56,14 +55,14 @@ namespace JRPC_Client
 			std::wstring				GetName(IXboxConsole* Console);
 			std::wstring				GetXUID(IXboxConsole* Console);
 			std::wstring				GetDMVersion(IXboxConsole* Console);
-			std::wstring				GetCurrentTitleId(IXboxConsole* Console);
-			std::wstring				XamGetCurrentTitleId(IXboxConsole* Console);
+			UINT32						GetCurrentTitleId(IXboxConsole* Console);
+			UINT32						XamGetCurrentTitleId(IXboxConsole* Console);
+			UINT32						GetTemperature(IXboxConsole* Console, TemperatureType TemperatureType);
 			std::wstring				GetKeneralVersion(IXboxConsole* Console);
-			std::wstring				GetTemperature(IXboxConsole* Console, TemperatureType TemperatureType);
 			void						FreezeConsole(IXboxConsole* Console, bool Freeze);
 			void						ShutDownConsole(IXboxConsole* Console);
-			void						RebootConsole(IXboxConsole* Console, RebootFlag Flag);
-			void						Reboot(IXboxConsole* Console, RebootFlag Flag);
+			void						RebootConsole(IXboxConsole* Console, XboxRebootFlag Flag);
+			void						Reboot(IXboxConsole* Console, XboxRebootFlag Flag);
 			bool						SetFanSpeed(IXboxConsole* Console, int Fan, int Speed);
 			void						GetUserDefaultProfile(IXboxConsole* Console);
 			void						SetUserDefaultProfile(IXboxConsole* Console, long XUID);
@@ -71,14 +70,16 @@ namespace JRPC_Client
 			void						QuickSignIn(IXboxConsole* Console);
 			void						SetConsoleColor(IXboxConsole* Console, XboxColor color);
 			void						Push();
+			void						XNotify(IXboxConsole* Console, std::wstring Message, XNotifyType Type);
+			void						XNotify(IXboxConsole* Console, std::wstring Message, int Type);
 			void						CallVoid(IXboxConsole* Console, UINT32 Address, std::vector<void*>& Arguments);
 			void						CallVoid(IXboxConsole* Console, std::wstring Module, int Ordinal, std::vector<void*>& Arguments);
-			void						CallVoid(IXboxConsole* Console, ThreadType Type, UINT32 Address, std::vector<void*>& Arguments);
-			void						CallVoid(IXboxConsole* Console, ThreadType Type, std::wstring Module, int Ordinal, std::vector<void*>& Arguments);
+			void						CallVoid(IXboxConsole* Console, XboxThreadType Type, UINT32 Address, std::vector<void*>& Arguments);
+			void						CallVoid(IXboxConsole* Console, XboxThreadType Type, std::wstring Module, int Ordinal, std::vector<void*>& Arguments);
 			std::wstring				CallString(IXboxConsole* Console, UINT32 Address, std::vector<void*>& Arguments);
 			std::wstring				CallString(IXboxConsole* Console, std::wstring Module, int Ordinal, std::vector<void*>& Arguments);
-			std::wstring				CallString(IXboxConsole* Console, ThreadType Type, UINT32 Address, std::vector<void*>& Arguments);
-			std::wstring				CallString(IXboxConsole* Console, ThreadType Type, std::wstring Module, int Ordinal, std::vector<void*>& Arguments);
+			std::wstring				CallString(IXboxConsole* Console, XboxThreadType Type, UINT32 Address, std::vector<void*>& Arguments);
+			std::wstring				CallString(IXboxConsole* Console, XboxThreadType Type, std::wstring Module, int Ordinal, std::vector<void*>& Arguments);
 			UINT32						ResolveFunction(IXboxConsole* Console, std::wstring Module, UINT32 Ordinal);
 			INT32						UIntToInt(UINT Value);;
 			std::wstring				ToHexWString(const std::wstring& WString);
@@ -102,8 +103,9 @@ namespace JRPC_Client
 
 			bool							IsValidReturnValue(const std::type_info& T);
 			bool							IsValidReturnType(const std::type_info& T);
-			std::wstring					ConvertToHex(UINT32 value);
 			unsigned int					ParseHexValue(const std::wstring& input);
+			std::wstring					ConvertToHex(UINT32 value);
+			std::wstring					ReplaceWString(std::wstring source, const std::wstring& from, const std::wstring& to);
 			std::wstring					CallArgs(IXboxConsole* Console, bool SystemThread, UINT32 Type, const std::type_info& T, const std::wstring Module, int Ordinal, UINT32 Address, UINT32 ArraySize, const std::vector<std::any>& Arguments);
 
 			std::unordered_map<std::type_index, int>	StructPrimitiveSizeMap;
@@ -160,10 +162,10 @@ namespace JRPC_Client
 			T Call(IXboxConsole* Console, const std::wstring& Module, int Ordinal, const std::vector<void*>& Arguments);
 
 			template <typename T>
-			T Call(IXboxConsole* Console, ThreadType Type, UINT32 Address, const std::vector<void*>& Arguments);
+			T Call(IXboxConsole* Console, XboxThreadType Type, UINT32 Address, const std::vector<void*>& Arguments);
 
 			template <typename T>
-			T Call(IXboxConsole* Console, ThreadType Type, std::wstring Module, int Ordinal, const std::vector<void*>& Arguments);
+			T Call(IXboxConsole* Console, XboxThreadType Type, std::wstring Module, int Ordinal, const std::vector<void*>& Arguments);
 
 			template <typename T>
 			T* CallArray(IXboxConsole* Console, UINT32 Address, UINT32 ArraySize, const std::vector<void*>& Arguments);
@@ -172,10 +174,10 @@ namespace JRPC_Client
 			T* CallArray(IXboxConsole* Console, std::wstring Module, int Ordinal, UINT32 ArraySize, const std::vector<void*>& Arguments);
 			
 			template <typename T>
-			T* CallArray(IXboxConsole* Console, ThreadType Type, UINT32 Address, UINT32 ArraySize, const std::vector<void*>& Arguments);
+			T* CallArray(IXboxConsole* Console, XboxThreadType Type, UINT32 Address, UINT32 ArraySize, const std::vector<void*>& Arguments);
 			
 			template <typename T>
-			T* CallArray(IXboxConsole* Console, ThreadType Type, std::wstring Module, int Ordinal, UINT32 ArraySize, const std::vector<void*>& Arguments);
+			T* CallArray(IXboxConsole* Console, XboxThreadType Type, std::wstring Module, int Ordinal, UINT32 ArraySize, const std::vector<void*>& Arguments);
 
 			template <typename T>
 			T CallArgs(IXboxConsole* Console, bool SystemThread, UINT32 Type, std::type_info& t, std::string module, int ordinal, UINT32 Address, UINT32 ArraySize, const std::vector<std::string>& Arguments);
@@ -187,11 +189,5 @@ namespace JRPC_Client
 			void Poke(IXboxConsole* Console, UINT64 Address, const T& Data);
 	};
 }
-
-enum class ThreadType
-{
-	System,
-	User
-};
 
 #endif // !JRPCPLUSPLUS_H

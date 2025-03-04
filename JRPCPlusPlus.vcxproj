@@ -110,7 +110,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_NONSTDC_NO_WARNINGS;_DEBUG;JRPCPLUSPLUS_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>F:\Coding\Misc Visual Studio Projects\_C Libraries_\Linux\Dirent;F:\Coding\Misc Visual Studio Projects\_C Libraries_\XBDM\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpplatest</LanguageStandard>
@@ -143,26 +143,21 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Enums\LEDState.h" />
-    <ClInclude Include="Enums\RebootFlag.h" />
-    <ClInclude Include="Enums\TemperatureType.h" />
-    <ClInclude Include="Enums\TrayState.h" />
-    <ClInclude Include="Enums\XboxColor.h" />
-    <ClInclude Include="Enums\XNotifyType.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="JRPCPlusPlus.h" />
-    <ClInclude Include="pch.h" />
+    <ClInclude Include="LEDState.h" />
+    <ClInclude Include="PartyOptions.h" />
+    <ClInclude Include="XboxRebootFlag.h" />
+    <ClInclude Include="TemperatureType.h" />
+    <ClInclude Include="XboxThreadType.h" />
     <ClInclude Include="XbdmCommands.h" />
+    <ClInclude Include="XboxColor.h" />
+    <ClInclude Include="XboxConsoleType.h" />
     <ClInclude Include="XboxShortcuts.h" />
+    <ClInclude Include="XNotifyType.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="JRPCPlusPlus.cpp" />
-    <ClCompile Include="pch.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-    </ClCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
