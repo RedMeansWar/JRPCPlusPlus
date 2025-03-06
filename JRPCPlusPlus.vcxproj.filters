@@ -15,45 +15,60 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="framework.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="JRPCPlusPlus.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="XboxShortcuts.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="XbdmCommands.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="LEDState.h">
+    <ClInclude Include="Enums\DLOrdinals.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="XboxRebootFlag.h">
+    <ClInclude Include="Enums\LEDState.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PartyOptions.h">
+    <ClInclude Include="Enums\PartyOptions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="TemperatureType.h">
+    <ClInclude Include="Enums\TemperatureType.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="XboxThreadType.h">
+    <ClInclude Include="Enums\XboxColor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="XboxColor.h">
+    <ClInclude Include="Enums\XboxConsoleType.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="XboxConsoleType.h">
+    <ClInclude Include="Enums\XboxRebootFlag.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="XNotifyType.h">
+    <ClInclude Include="Enums\XboxShortcuts.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Enums\XboxThreadType.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Enums\XNotifyType.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Enums\PowerLEDMode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Structures\String.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Enums\ExCreateThreadFlag.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Enums\FirmwareReentry.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="JRPCPlusPlus.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Kernal.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

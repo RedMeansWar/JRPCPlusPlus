@@ -6,6 +6,9 @@
 
 namespace JRPC_Client
 {
+	DLAUNCH_GET_OPT_VALUE_BY_NAME GetOptionValueByName = nullptr;
+	DLAUNCH_SET_OPT_VALUE_BY_NAME SetOptionValueByName = nullptr;
+
 	#pragma region Connections
 	bool JRPC::Connect(IXboxConsole* Console, std::wstring XboxNameOrIp)
 	{
@@ -245,7 +248,7 @@ namespace JRPC_Client
 
 	UINT32 JRPC::GetCurrentTitleId(IXboxConsole* Console)
 	{
-		XamGetCurrentTitleId(Console);
+		return XamGetCurrentTitleId(Console);
 	}
 
 	std::wstring JRPC::GetDMVersion(IXboxConsole* Console)
@@ -633,6 +636,13 @@ namespace JRPC_Client
 		}
 
 		return source;
+	}
+
+	void JRPC::Log(std::string message)
+	{
+		std::ostringstream oss;
+		oss << "[JRPC]: " << message << "\n";
+		std::cout << oss.str();
 	}
 	#pragma endregion
 

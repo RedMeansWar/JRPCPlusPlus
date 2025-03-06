@@ -143,21 +143,26 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="framework.h" />
+    <ClInclude Include="Enums\DLOrdinals.h" />
+    <ClInclude Include="Enums\ExCreateThreadFlag.h" />
+    <ClInclude Include="Enums\FirmwareReentry.h" />
+    <ClInclude Include="Enums\LEDState.h" />
+    <ClInclude Include="Enums\PartyOptions.h" />
+    <ClInclude Include="Enums\PowerLEDMode.h" />
+    <ClInclude Include="Enums\TemperatureType.h" />
+    <ClInclude Include="Enums\XboxColor.h" />
+    <ClInclude Include="Enums\XboxConsoleType.h" />
+    <ClInclude Include="Enums\XboxRebootFlag.h" />
+    <ClInclude Include="Enums\XboxShortcuts.h" />
+    <ClInclude Include="Enums\XboxThreadType.h" />
+    <ClInclude Include="Enums\XNotifyType.h" />
     <ClInclude Include="JRPCPlusPlus.h" />
-    <ClInclude Include="LEDState.h" />
-    <ClInclude Include="PartyOptions.h" />
-    <ClInclude Include="XboxRebootFlag.h" />
-    <ClInclude Include="TemperatureType.h" />
-    <ClInclude Include="XboxThreadType.h" />
+    <ClInclude Include="Structures\String.h" />
     <ClInclude Include="XbdmCommands.h" />
-    <ClInclude Include="XboxColor.h" />
-    <ClInclude Include="XboxConsoleType.h" />
-    <ClInclude Include="XboxShortcuts.h" />
-    <ClInclude Include="XNotifyType.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="JRPCPlusPlus.cpp" />
+    <ClCompile Include="Kernal.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

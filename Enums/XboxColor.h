@@ -1,5 +1,4 @@
 #pragma once
-
 typedef enum XboxColor
 {
 	Black,
